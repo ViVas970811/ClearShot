@@ -90,6 +90,29 @@ cd ClearShot
 pip install -r requirements.txt
 ```
 
+### Produce the Dataset
+
+
+```bash
+# 1. Download ABO metadata (~5 min)
+python data/scripts/download_abo.py --output_dir data/metadata
+
+# 2. Curate balanced 24K subset + download images (~5 min, 24 workers)
+python data/scripts/create_subset.py \
+    --catalog data/metadata/catalog.parquet \
+    --n_per_category 4700 \
+    --clean_existing
+
+# 3. Generate synthetic degradation pairs (~15 min on 6 workers)
+python data/scripts/synthesize_degradations.py \
+    --input_dir data/raw --n_variants 1 --max_workers 6
+
+# 4. Run comprehensive EDA (~5 min)
+python notebooks/run_eda.py
+```
+
+All scripts use `seed=42` for reproducibility.
+
 ### Enhance a Single Image
 
 ```python
@@ -118,12 +141,57 @@ docker run -p 7860:7860 --gpus all clearshot
 
 ## Dataset
 
-Uses a curated subset (~5,000 images) from the [Amazon Berkeley Objects (ABO)](https://amazon-berkeley-objects.s3.amazonaws.com/index.html) dataset with synthetically generated degradations:
+Uses a curated, balanced subset of the [Amazon Berkeley Objects (ABO)](https://amazon-berkeley-objects.s3.amazonaws.com/index.html) dataset with synthetically generated degradations.
 
-- Gaussian noise and blur
-- JPEG compression artifacts
-- Color and lighting inconsistencies
-- Background clutter
+### Scale
+
+| | Count |
+|---|:---:|
+| Clean ground-truth images | **24,131** |
+| Degraded variants | **24,131** |
+| Total training pairs | **24,131** |
+| Train / Val / Test split | 19,304 / 2,413 / 2,414 |
+
+Split is performed **by `image_id`** (not by pair) using `random_state=42` to guarantee no leakage between sets.
+
+### Category Balance
+
+| Category | Count | % |
+|----------|:---:|:---:|
+| apparel | 4,700 | 19.5% |
+| electronics | 4,700 | 19.5% |
+| furniture | 4,700 | 19.5% |
+| home_decor | 4,700 | 19.5% |
+| jewelry | 2,804 | 11.6% |
+| outdoor | 1,901 | 7.9% |
+| kitchen | 626 | 2.6% |
+
+The initial iteration suffered from 69% phone-case dominance (keyword-matching mapped every `product_type` containing "CASE" to electronics). Fixed via an explicit `product_type` → category lookup table with per-category caps.
+
+### Synthetic Degradations
+
+Nine composable, randomized transforms simulate amateur smartphone photography:
+
+- Gaussian noise (σ=10-50) and Gaussian blur (kernel 3-9)
+- JPEG compression artifacts (quality 15-55)
+- Color jitter (brightness/contrast/saturation/hue shifts)
+- Uneven exposure and vignette
+- Random elliptical shadows
+- Background clutter (colored noise patches)
+- Downscale + upscale (low-resolution simulation)
+
+Each transform is applied independently with configurable probability, producing a healthy difficulty gradient across the training set.
+
+### Degradation Validation
+
+| Metric | Clean (median) | Degraded (median) | Change |
+|---|:---:|:---:|:---:|
+| Sharpness (Laplacian variance) | 66.83 | 36.78 | **-45.0%** |
+| Brightness | 207.89 | 146.31 | -29.6% |
+| Contrast | 62.44 | 44.50 | -28.7% |
+| Colorfulness | 16.16 | 14.52 | -10.2% |
+
+Paired PSNR: **11.80 dB** (median), SSIM: **0.737** (median) — substantial information loss in the recoverable regime that makes this a meaningful restoration problem for diffusion models.
 
 ---
 
@@ -168,7 +236,9 @@ ClearShot/
 │       ├── create_subset.py
 │       └── synthesize_degradations.py
 ├── docs/                   # Architecture documentation
+├── eda_results/            # EDA artifacts (visualizations + stats)
 ├── notebooks/              # EDA, training, evaluation notebooks
+│   ├── run_eda.py
 │   ├── 01_eda.ipynb
 │   ├── 02_degradation_demo.ipynb
 │   ├── 03_training.ipynb
@@ -199,6 +269,12 @@ ClearShot/
 ## Team
 
 **Group 3** - University of Maryland, DATA612
+
+- Dhanush Garikapati
+- Gowtham Tadikamalla
+- Rasagna Tirumani
+- Roshan Syed
+- Vivek Vasisht Ediga
 
 ---
 
