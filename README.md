@@ -14,11 +14,6 @@ ClearShot transforms amateur product photos into professional-quality images usi
 
 Small e-commerce businesses rely on smartphone photos taken in uncontrolled environments — cluttered backgrounds, poor lighting, and low resolution. ClearShot fixes this automatically.
 
-**Before & After:**
-
-| Input (Amateur) | ClearShot Output |
-|:---:|:---:|
-| ![before](docs/assets/before_1.jpg) | ![after](docs/assets/after_1.jpg) |
 
 ---
 
