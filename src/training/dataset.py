@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 import cv2
 from typing import Optional, Dict
-from torchvision import transforms
 
 
 class ProductEnhancementDataset(Dataset):
@@ -29,15 +28,6 @@ class ProductEnhancementDataset(Dataset):
         canny_high: int = 200,
         tokenizer=None,
     ):
-        """
-        Args:
-            manifest_path: Path to CSV with columns: clean_path, degraded_path
-            resolution: Target image resolution (images should already be this size)
-            prompt: Text prompt used during training
-            canny_low: Canny edge detection lower threshold
-            canny_high: Canny edge detection upper threshold
-            tokenizer: Optional CLIPTokenizer for pre-tokenizing prompts
-        """
         self.manifest = pd.read_csv(manifest_path)
         self.resolution = resolution
         self.prompt = prompt
@@ -45,27 +35,28 @@ class ProductEnhancementDataset(Dataset):
         self.canny_high = canny_high
         self.tokenizer = tokenizer
 
-        # Verify required columns exist
         required = {"clean_path", "degraded_path"}
         missing = required - set(self.manifest.columns)
         if missing:
             raise ValueError(f"Manifest missing columns: {missing}")
 
-        # Standard normalization for SD latent space: [0,1] -> [-1,1]
-        self.image_transform = transforms.Compose([
-            transforms.Resize((resolution, resolution), interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
-        ])
-
-        # Conditioning images (edge maps) are normalized to [0,1] only
-        self.conditioning_transform = transforms.Compose([
-            transforms.Resize((resolution, resolution), interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.ToTensor(),
-        ])
-
     def __len__(self) -> int:
         return len(self.manifest)
+
+    def _load_and_resize(self, path: str) -> Image.Image:
+        """Load an image and resize to target resolution."""
+        img = Image.open(path).convert("RGB")
+        if img.size != (self.resolution, self.resolution):
+            img = img.resize((self.resolution, self.resolution), Image.BILINEAR)
+        return img
+
+    def _image_to_tensor(self, img: Image.Image, normalize: bool = True) -> torch.Tensor:
+        """Convert PIL image to tensor. If normalize=True, maps [0,1] -> [-1,1] for SD latent space."""
+        arr = np.array(img).astype(np.float32) / 255.0  # [0, 1]
+        tensor = torch.from_numpy(arr).permute(2, 0, 1)  # HWC -> CHW
+        if normalize:
+            tensor = tensor * 2.0 - 1.0  # [-1, 1]
+        return tensor
 
     def _extract_canny(self, image: Image.Image) -> Image.Image:
         """Extract Canny edges from a PIL image, return as 3-channel RGB."""
@@ -74,7 +65,6 @@ class ProductEnhancementDataset(Dataset):
             gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         else:
             gray = img_array
-
         edges = cv2.Canny(gray, self.canny_low, self.canny_high)
         edges_rgb = np.stack([edges] * 3, axis=-1)
         return Image.fromarray(edges_rgb, "RGB")
@@ -82,19 +72,16 @@ class ProductEnhancementDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         row = self.manifest.iloc[idx]
 
-        clean_path = row["clean_path"]
-        degraded_path = row["degraded_path"]
+        clean_image = self._load_and_resize(row["clean_path"])
+        degraded_image = self._load_and_resize(row["degraded_path"])
 
-        clean_image = Image.open(clean_path).convert("RGB")
-        degraded_image = Image.open(degraded_path).convert("RGB")
-
-        # Extract Canny edges from the clean image for ControlNet conditioning
+        # Canny edges from clean image for ControlNet conditioning
         edge_map = self._extract_canny(clean_image)
 
-        # Apply transforms
-        clean_tensor = self.image_transform(clean_image)
-        degraded_tensor = self.image_transform(degraded_image)
-        edge_tensor = self.conditioning_transform(edge_map)
+        # Convert to tensors
+        clean_tensor = self._image_to_tensor(clean_image, normalize=True)       # [-1, 1]
+        degraded_tensor = self._image_to_tensor(degraded_image, normalize=True)  # [-1, 1]
+        edge_tensor = self._image_to_tensor(edge_map, normalize=False)           # [0, 1]
 
         sample = {
             "clean": clean_tensor,
@@ -103,7 +90,6 @@ class ProductEnhancementDataset(Dataset):
             "prompt": self.prompt,
         }
 
-        # Pre-tokenize if tokenizer is available
         if self.tokenizer is not None:
             tokens = self.tokenizer(
                 self.prompt,
@@ -125,27 +111,12 @@ def get_dataloader(
     shuffle: bool = True,
     tokenizer=None,
 ) -> torch.utils.data.DataLoader:
-    """
-    Convenience function to create a DataLoader from a manifest CSV.
-
-    Args:
-        manifest_path: Path to train/val/test manifest
-        batch_size: Batch size
-        resolution: Image resolution
-        num_workers: Number of data loading workers
-        shuffle: Whether to shuffle
-        tokenizer: Optional CLIPTokenizer
-
-    Returns:
-        DataLoader
-    """
     dataset = ProductEnhancementDataset(
         manifest_path=manifest_path,
         resolution=resolution,
         tokenizer=tokenizer,
     )
-
-    loader = torch.utils.data.DataLoader(
+    return torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
@@ -153,5 +124,3 @@ def get_dataloader(
         pin_memory=True,
         drop_last=True,
     )
-
-    return loader
