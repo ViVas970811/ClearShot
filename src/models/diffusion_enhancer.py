@@ -22,14 +22,6 @@ class DiffusionEnhancer:
         device: str = "cuda",
         dtype: torch.dtype = torch.float16,
     ):
-        """
-        Args:
-            base_model: HuggingFace model ID for SD 1.5
-            controlnet_model: HuggingFace model ID for ControlNet
-            lora_weights_path: Path to trained LoRA weights (None = no LoRA)
-            device: 'cuda' or 'cpu'
-            dtype: torch.float16 for GPU, torch.float32 for CPU
-        """
         from diffusers import (
             StableDiffusionControlNetImg2ImgPipeline,
             ControlNetModel,
@@ -39,12 +31,10 @@ class DiffusionEnhancer:
         self.device = device
         self.dtype = dtype
 
-        # Load ControlNet
         controlnet = ControlNetModel.from_pretrained(
             controlnet_model, torch_dtype=dtype
         )
 
-        # Load SD 1.5 + ControlNet img2img pipeline
         self.pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
             base_model,
             controlnet=controlnet,
@@ -53,39 +43,32 @@ class DiffusionEnhancer:
             requires_safety_checker=False,
         )
 
-        # Use a faster scheduler
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(
             self.pipe.scheduler.config
         )
 
         self.pipe.to(device)
 
-        # Enable memory optimizations
+        # Memory optimizations: try xformers, fall back to attention slicing
         if device == "cuda":
-            self.pipe.enable_xformers_memory_efficient_attention()
+            try:
+                self.pipe.enable_xformers_memory_efficient_attention()
+            except (ModuleNotFoundError, ImportError):
+                self.pipe.enable_attention_slicing()
 
-        # Load LoRA weights if provided
         if lora_weights_path is not None:
             self.load_lora(lora_weights_path)
 
         self.lora_loaded = lora_weights_path is not None
 
     def load_lora(self, weights_path: str):
-        """
-        Load trained LoRA weights into the pipeline.
-
-        Args:
-            weights_path: Path to LoRA weights directory or file
-        """
         weights_path = Path(weights_path)
-
         if weights_path.is_dir():
             self.pipe.load_lora_weights(str(weights_path))
         else:
             self.pipe.load_lora_weights(
                 str(weights_path.parent), weight_name=weights_path.name
             )
-
         self.lora_loaded = True
 
     def enhance(
@@ -100,34 +83,15 @@ class DiffusionEnhancer:
         strength: float = 0.45,
         seed: Optional[int] = None,
     ) -> Image.Image:
-        """
-        Enhance a single product image.
-
-        Args:
-            image: Degraded input image (RGB)
-            control_image: Canny/HED edge map (RGB, 3-channel)
-            prompt: Text prompt for enhancement
-            negative_prompt: Negative prompt
-            num_inference_steps: Number of diffusion steps
-            guidance_scale: Classifier-free guidance scale
-            controlnet_conditioning_scale: ControlNet conditioning strength
-            strength: img2img strength (0=no change, 1=full denoise)
-            seed: Random seed for reproducibility (None=random)
-
-        Returns:
-            Enhanced PIL Image (RGB)
-        """
         generator = None
         if seed is not None:
             generator = torch.Generator(device=self.device).manual_seed(seed)
 
-        # Ensure images are the right size and mode
         if image.mode != "RGB":
             image = image.convert("RGB")
         if control_image.mode != "RGB":
             control_image = control_image.convert("RGB")
 
-        # Run the pipeline
         result = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -150,19 +114,6 @@ class DiffusionEnhancer:
         negative_prompt: str = "blurry, noisy, low quality, distorted, deformed, watermark, text",
         **kwargs,
     ) -> list:
-        """
-        Enhance a batch of images.
-
-        Args:
-            images: List of degraded input images
-            control_images: List of corresponding edge maps
-            prompt: Text prompt (applied to all)
-            negative_prompt: Negative prompt (applied to all)
-            **kwargs: Additional arguments passed to enhance()
-
-        Returns:
-            List of enhanced PIL Images
-        """
         results = []
         for img, ctrl in zip(images, control_images):
             enhanced = self.enhance(
@@ -175,7 +126,6 @@ class DiffusionEnhancer:
         return results
 
     def get_pipeline_config(self) -> Dict[str, Any]:
-        """Return current pipeline configuration for logging."""
         return {
             "base_model": self.pipe.config._name_or_path if hasattr(self.pipe.config, "_name_or_path") else "unknown",
             "device": str(self.device),
