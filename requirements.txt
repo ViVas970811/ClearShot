@@ -1,0 +1,36 @@
+# Core ML
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Diffusion & fine-tuning
+diffusers>=0.25.0
+transformers>=4.36.0
+accelerate>=0.25.0
+peft>=0.7.0
+controlnet-aux
+
+# Image processing
+rembg
+realesrgan
+opencv-python
+Pillow
+numpy
+scipy
+scikit-image
+
+# Evaluation metrics
+pytorch-fid
+lpips
+torchmetrics
+
+# Web UI
+gradio>=4.0
+
+# Utilities
+pyyaml
+tqdm
+matplotlib
+pandas
+
+# Experiment tracking (optional)
+# wandb
