@@ -1,7 +1,9 @@
 # ClearShot
 
 **AI-Powered Product Photo Enhancement for E-Commerce**
+
 **Authors:** Dhanush Garikapati, Gowtham Tadikamalla, Rasagna Tirumani, Roshan Syed, Vivek Vasisht Ediga  
+
 ClearShot transforms amateur product photos into professional-quality images using generative diffusion models. Built for small businesses that need catalog-quality product photography without expensive studio setups.
 
 > DATA612 Course Project | University of Maryland | Group 3
