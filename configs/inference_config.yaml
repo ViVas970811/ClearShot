@@ -1,0 +1,31 @@
+pipeline:
+  num_inference_steps: 30
+  guidance_scale: 7.5
+  controlnet_conditioning_scale: 0.8
+  strength: 0.45
+  seed: null  # null = random
+
+preprocessing:
+  background_removal:
+    model: "u2net"
+  edge_extraction:
+    method: "canny"
+    low_threshold: 100
+    high_threshold: 200
+
+super_resolution:
+  enabled: true
+  model: "RealESRGAN_x2plus"
+  scale: 2
+
+background:
+  mode: "white"  # options: white, gradient, studio
+
+prompt:
+  template: "professional product photography, studio lighting, clean white background, high quality, 4k, detailed"
+  negative: "blurry, noisy, low quality, distorted, deformed, watermark, text"
+
+output:
+  save_intermediates: true  # save mask, edges, pre-SR output
+  format: "png"
+  quality: 95
