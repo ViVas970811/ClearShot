@@ -71,6 +71,26 @@ class DiffusionEnhancer:
             )
         self.lora_loaded = True
 
+    def load_lora_peft(self, weights_path: str):
+        """Load LoRA weights saved in peft format (adapter_config.json + adapter_model.safetensors).
+
+        Use this method for weights produced by Phase 3 training (src/training/train_lora.py),
+        which saves via peft's save_pretrained(). The standard load_lora() method uses
+        pipe.load_lora_weights() which expects diffusers-format keys and will silently
+        fail to load peft-format weights.
+
+        Args:
+            weights_path: Path to directory containing adapter_config.json
+                          and adapter_model.safetensors
+        """
+        from peft import PeftModel
+
+        self.pipe.unet = PeftModel.from_pretrained(
+            self.pipe.unet, weights_path
+        )
+        self.pipe.unet.to(self.device)
+        self.lora_loaded = True
+
     def enhance(
         self,
         image: Image.Image,
