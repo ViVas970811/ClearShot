@@ -79,6 +79,10 @@ class DiffusionEnhancer:
         pipe.load_lora_weights() which expects diffusers-format keys and will silently
         fail to load peft-format weights.
 
+        The wrapped model is cast to both the target device AND dtype. Without the dtype
+        cast, fp16 base UNet + fp32 PEFT adapters produce a runtime mismatch on GPU
+        (works on CPU because both default to fp32).
+
         Args:
             weights_path: Path to directory containing adapter_config.json
                           and adapter_model.safetensors
@@ -88,7 +92,9 @@ class DiffusionEnhancer:
         self.pipe.unet = PeftModel.from_pretrained(
             self.pipe.unet, weights_path
         )
-        self.pipe.unet.to(self.device)
+        # Cast both device AND dtype; PEFT adapters default to fp32 even when the
+        # base UNet is fp16, which would cause a dtype mismatch at inference on GPU.
+        self.pipe.unet.to(self.device, dtype=self.dtype)
         self.lora_loaded = True
 
     def enhance(

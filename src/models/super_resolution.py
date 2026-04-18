@@ -3,6 +3,10 @@ Super-resolution upscaling using Real-ESRGAN.
 
 Wraps the realesrgan package with pretrained RealESRGAN_x2plus weights
 for 2x upscaling (512 -> 1024). No training required.
+
+Note: The torchvision/basicsr compatibility shim lives in src/__init__.py
+so it's active on any src import (basicsr's broken import path only fires
+when RealESRGANer loads, which happens lazily in _get_upsampler).
 """
 
 import numpy as np
@@ -56,29 +60,39 @@ class SuperResolver:
         from basicsr.archs.rrdbnet_arch import RRDBNet
         from realesrgan import RealESRGANer
 
-        # Configure architecture based on model name
+        # Configure architecture and download URL based on model name.
+        # RealESRGANer requires an explicit URL or local path (None is NOT allowed -
+        # it will crash with "'NoneType' has no attribute 'startswith'").
         if self.model_name == "RealESRGAN_x2plus":
             model = RRDBNet(
                 num_in_ch=3, num_out_ch=3, num_feat=64,
                 num_block=23, num_grow_ch=32, scale=2,
             )
             netscale = 2
+            model_url = (
+                "https://github.com/xinntao/Real-ESRGAN/releases/download/"
+                "v0.2.1/RealESRGAN_x2plus.pth"
+            )
         elif self.model_name == "RealESRGAN_x4plus":
             model = RRDBNet(
                 num_in_ch=3, num_out_ch=3, num_feat=64,
                 num_block=23, num_grow_ch=32, scale=4,
             )
             netscale = 4
+            model_url = (
+                "https://github.com/xinntao/Real-ESRGAN/releases/download/"
+                "v0.1.0/RealESRGAN_x4plus.pth"
+            )
         else:
             raise ValueError(
                 f"Unknown model: {self.model_name}. "
                 f"Use 'RealESRGAN_x2plus' or 'RealESRGAN_x4plus'."
             )
 
-        # RealESRGANer handles model download automatically
+        # Pass URL to model_path; RealESRGANer downloads + caches to ./weights/
         self._upsampler = RealESRGANer(
             scale=netscale,
-            model_path=None,  # auto-download from GitHub releases
+            model_path=model_url,
             model=model,
             tile=0,  # no tiling (full image at once)
             tile_pad=10,

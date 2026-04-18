@@ -226,7 +226,18 @@ class ClearShotPipeline:
         if image.mode != "RGB":
             image = image.convert("RGB")
 
+        # Preserve the caller's original image in the result before any resizing.
         result = EnhancementResult(original=image.copy())
+
+        # Normalize to 512x512 for the diffusion pipeline. SD 1.5 was trained at
+        # 512x512 and the LoRA adapter from Phase 3 was fine-tuned at 512x512, so
+        # running inference at the training resolution yields the best quality AND
+        # guarantees a deterministic final output size (1024x1024 after 2x SR).
+        # Without this step, a 256x256 input would produce a 512x512 final, which
+        # violates the pipeline's advertised output size.
+        PIPELINE_RES = 512
+        if image.size != (PIPELINE_RES, PIPELINE_RES):
+            image = image.resize((PIPELINE_RES, PIPELINE_RES), Image.BILINEAR)
 
         # --- Read config defaults ---
         pipe_cfg = self.config.get("pipeline", {})
