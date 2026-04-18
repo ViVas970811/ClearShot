@@ -33,6 +33,11 @@ eda_results_v2_balanced_5k/
 *.pth
 lora_weights/
 checkpoints/
+ClearShot_checkpoints/
+ClearShot_data/
+ClearShot_checkpoints*.zip
+ClearShot_data*.zip
+inference_output/
 
 # ============================================================
 # Python
@@ -81,3 +86,4 @@ outputs/
 *.log
 *.tmp
 *.bak
+reports/

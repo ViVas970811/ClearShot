@@ -97,14 +97,10 @@ pip install -r requirements.txt
 python data/scripts/download_abo.py --output_dir data/metadata
 
 # 2. Curate balanced 24K subset + download images (~5 min, 24 workers)
-python data/scripts/create_subset.py \
-    --catalog data/metadata/catalog.parquet \
-    --n_per_category 4700 \
-    --clean_existing
+python data/scripts/create_subset.py --catalog data/metadata/catalog.parquet --n_per_category 4700 --clean_existing
 
 # 3. Generate synthetic degradation pairs (~15 min on 6 workers)
-python data/scripts/synthesize_degradations.py \
-    --input_dir data/raw --n_variants 1 --max_workers 6
+python data/scripts/synthesize_degradations.py --input_dir data/raw --n_variants 1 --max_workers 6
 
 # 4. Run comprehensive EDA (~5 min)
 python notebooks/run_eda.py

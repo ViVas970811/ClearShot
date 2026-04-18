@@ -71,6 +71,32 @@ class DiffusionEnhancer:
             )
         self.lora_loaded = True
 
+    def load_lora_peft(self, weights_path: str):
+        """Load LoRA weights saved in peft format (adapter_config.json + adapter_model.safetensors).
+
+        Use this method for weights produced by Phase 3 training (src/training/train_lora.py),
+        which saves via peft's save_pretrained(). The standard load_lora() method uses
+        pipe.load_lora_weights() which expects diffusers-format keys and will silently
+        fail to load peft-format weights.
+
+        The wrapped model is cast to both the target device AND dtype. Without the dtype
+        cast, fp16 base UNet + fp32 PEFT adapters produce a runtime mismatch on GPU
+        (works on CPU because both default to fp32).
+
+        Args:
+            weights_path: Path to directory containing adapter_config.json
+                          and adapter_model.safetensors
+        """
+        from peft import PeftModel
+
+        self.pipe.unet = PeftModel.from_pretrained(
+            self.pipe.unet, weights_path
+        )
+        # Cast both device AND dtype; PEFT adapters default to fp32 even when the
+        # base UNet is fp16, which would cause a dtype mismatch at inference on GPU.
+        self.pipe.unet.to(self.device, dtype=self.dtype)
+        self.lora_loaded = True
+
     def enhance(
         self,
         image: Image.Image,
