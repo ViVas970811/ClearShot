@@ -1,0 +1,55 @@
+data:
+  test_manifest: "data/test_manifest.csv"
+  reference_manifest: "data/val_manifest.csv"   # used for FID reference when provided
+  subset_size: 500
+  stratify_by_category: true
+  seed: 42
+
+runner:
+  output_dir: "evaluation_results"
+  eval_resolution: 512
+  image_format: "png"
+  reference_dir_name: "_reference_clean"
+  input_column: "degraded_path"
+  target_column: "clean_path"
+  image_id_column: "image_id"
+  category_column: "category"
+
+metrics:
+  device: null          # null = auto-detect CUDA, else "cuda" / "cpu"
+  lpips_net: "alex"
+  fid_batch_size: 32
+  fid_num_workers: 2
+  fid_dims: 2048
+
+baselines:
+  opencv:
+    enabled: true
+  pil_auto:
+    enabled: true
+  background_only:
+    enabled: true
+    bg_type: "white"
+    shadow: true
+  sd_no_lora:
+    enabled: true
+    config_path: "configs/inference_config.yaml"
+    seed: 42
+    # Metrics resize to eval_resolution (512) regardless, so SR only adds cost.
+    enable_sr: false
+  clearshot:
+    enabled: true
+    config_path: "configs/inference_config.yaml"
+    # Path to the PEFT-format LoRA adapter produced in Phase 3. Absolute
+    # paths are fine; env var expansion is handled by the notebook driver.
+    lora_weights_path: "ClearShot_checkpoints/final"
+    seed: 42
+    enable_sr: false
+
+reporting:
+  reference_method: "clearshot"
+  failure_case_top_k: 8
+  comparison_grid:
+    n_examples: 6
+    tile_size: 256
+    methods_in_order: ["opencv", "pil_auto", "background_only", "sd_no_lora", "clearshot"]

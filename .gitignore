@@ -38,6 +38,7 @@ ClearShot_data/
 ClearShot_checkpoints*.zip
 ClearShot_data*.zip
 inference_output/
+evaluation_results/
 
 # ============================================================
 # Python

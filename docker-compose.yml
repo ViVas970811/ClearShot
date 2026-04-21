@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  clearshot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7860:7860"
+    environment:
+      PORT: "7860"
+      CLEARSHOT_CONFIG_PATH: "configs/inference_config.yaml"
+      CLEARSHOT_LORA_PATH: "ClearShot_checkpoints/final"
+      CLEARSHOT_DEVICE: "auto"
+    volumes:
+      - ./:/app
+    command: python app.py

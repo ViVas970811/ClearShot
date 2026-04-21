@@ -192,13 +192,34 @@ Paired PSNR: **11.80 dB** (median), SSIM: **0.737** (median) — substantial inf
 
 ## Evaluation
 
-| Method | FID | SSIM | PSNR | LPIPS |
-|--------|:---:|:----:|:----:|:-----:|
-| OpenCV Baseline | TBD | TBD | TBD | TBD |
-| SD + ControlNet (no LoRA) | TBD | TBD | TBD | TBD |
-| **ClearShot (full pipeline)** | **TBD** | **TBD** | **TBD** | **TBD** |
+Phase 5 compares five methods on a stratified test subset:
 
-Metrics: FID (distribution quality), SSIM (structural similarity), PSNR (signal fidelity), LPIPS (perceptual similarity).
+| Method | Description |
+|--------|-------------|
+| OpenCV | CLAHE + bilateral filter + unsharp mask |
+| PIL AutoEnhance | autocontrast + brightness/contrast/color/sharpness |
+| Background-only | rembg + white studio background, no diffusion |
+| SD + ControlNet (no LoRA) | ClearShot pipeline with LoRA disabled (ablation) |
+| **ClearShot (full pipeline)** | LoRA + ControlNet + SR + background refinement |
+
+Metrics per image: PSNR, SSIM, LPIPS. Aggregate: FID. See
+`docs/PHASE5_EVALUATION.md` for prerequisites and exact commands.
+
+Run the full evaluation:
+
+```bash
+python notebooks/05_evaluation.py
+```
+
+Run only the metric and runner unit tests (no GPU, no LoRA required):
+
+```bash
+python -m pytest tests/test_metrics.py tests/test_runner_smoke.py tests/test_baselines_classical.py -v
+```
+
+Outputs land under `evaluation_results/` with per-image CSVs, a resumable
+prediction cache, a report directory (overall + per-category tables, paired
+t-tests), a side-by-side comparison grid, and a failure-case grid.
 
 ---
 
