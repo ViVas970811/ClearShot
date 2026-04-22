@@ -33,7 +33,9 @@ eda_results_v2_balanced_5k/
 *.pth
 lora_weights/
 checkpoints/
-ClearShot_checkpoints/
+ClearShot_checkpoints/*
+!ClearShot_checkpoints/final/
+!ClearShot_checkpoints/final/*
 ClearShot_data/
 ClearShot_checkpoints*.zip
 ClearShot_data*.zip

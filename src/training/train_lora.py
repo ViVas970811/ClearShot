@@ -30,12 +30,31 @@ from src.training.dataset import ProductEnhancementDataset
 
 
 def load_config(config_path: str = "configs/train_config.yaml") -> dict:
+    """
+    Load training configuration from a YAML file.
+
+    Args:
+        config_path: Path to the YAML configuration file.
+
+    Returns:
+        A dictionary containing the configuration.
+    """
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
 
-def prepare_models(config: dict, device: str, dtype: torch.dtype):
-    """Load and prepare all model components."""
+def prepare_models(config: dict, device: str, dtype: torch.dtype) -> tuple:
+    """
+    Load and prepare all model components for LoRA training.
+
+    Args:
+        config: Training configuration dictionary.
+        device: Target device for the models (e.g. 'cuda').
+        dtype: Data type for the models (e.g. torch.float16).
+
+    Returns:
+        Loaded text encoder, VAE, tokenizer, noise scheduler, ControlNet, and UNet.
+    """
     model_cfg = config["model"]
     lora_cfg = config["lora"]
 
@@ -93,8 +112,19 @@ def prepare_models(config: dict, device: str, dtype: torch.dtype):
     return vae, text_encoder, tokenizer, noise_scheduler, controlnet, unet
 
 
-def encode_prompt(tokenizer, text_encoder, prompt: str, device: str):
-    """Tokenize and encode a text prompt."""
+def encode_prompt(tokenizer: CLIPTokenizer, text_encoder: CLIPTextModel, prompt: str, device: str) -> torch.Tensor:
+    """
+    Tokenize and encode a text prompt into hidden states.
+
+    Args:
+        tokenizer: CLIP Tokenizer.
+        text_encoder: CLIP Text Model for encoding tokens.
+        prompt: String prompt to encode.
+        device: Device to place the encoded inputs on.
+
+    Returns:
+        A tensor of text encoder hidden states.
+    """
     tokens = tokenizer(
         prompt,
         padding="max_length",
@@ -111,7 +141,18 @@ def train(
     config_path: str = "configs/train_config.yaml",
     output_dir: str = "checkpoints",
     resume_from: str = None,
-):
+) -> list[float]:
+    """
+    Execute the LoRA training loop.
+
+    Args:
+        config_path: Path to training configuration.
+        output_dir: Directory to save model checkpoints.
+        resume_from: Optional checkpoint path to resume from.
+
+    Returns:
+        List of recorded loss values during training.
+    """
     config = load_config(config_path)
     train_cfg = config["training"]
     lora_cfg = config["lora"]
