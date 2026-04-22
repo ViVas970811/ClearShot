@@ -1,13 +1,3 @@
----
-title: ClearShot
-emoji: 📸
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-app_file: app.py
-pinned: false
-short_description: AI-Powered Product Photo Enhancement for E-Commerce
----
 # ClearShot
 
 **AI-Powered Product Photo Enhancement for E-Commerce**
