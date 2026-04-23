@@ -1,22 +1,61 @@
-# Core ML
+# =============================================================================
+# Core ML / Diffusion stack
+# =============================================================================
 torch
 torchvision
 diffusers
 transformers
 accelerate
 peft
-torchao>=0.16.0
-
-# Computer Vision & Image Processing
-opencv-python-headless
-rembg
-onnxruntime
-Pillow
-
-# Data & Utilities
-numpy
-scipy
 safetensors
 huggingface-hub
+
+# =============================================================================
+# Computer Vision & Preprocessing
+# =============================================================================
+opencv-python-headless
+Pillow
+rembg
+onnxruntime
+controlnet-aux
+
+# =============================================================================
+# Super-Resolution (Phase 4 - wrapped by src/models/super_resolution.py).
+# basicsr imports a removed torchvision path on torchvision>=0.17;
+# src/__init__.py installs a shim for this at import time.
+# =============================================================================
+basicsr
+realesrgan
+
+# =============================================================================
+# Evaluation Metrics (Phase 5)
+# =============================================================================
+torchmetrics
+lpips
+pytorch-fid
+scipy
+
+# =============================================================================
+# Data / Analysis
+# =============================================================================
+numpy
+pandas
+scikit-image
+numba
+
+# =============================================================================
+# Visualization (Phase 5 analysis + notebooks)
+# =============================================================================
+matplotlib
+seaborn
+
+# =============================================================================
+# Web UI (Phase 6)
+# =============================================================================
+gradio
+
+# =============================================================================
+# Utilities
+# =============================================================================
 PyYAML
 tqdm
