@@ -61,7 +61,13 @@ class DiffusionEnhancer:
 
         self.lora_loaded = lora_weights_path is not None
 
-    def load_lora(self, weights_path: str):
+    def load_lora(self, weights_path: str) -> None:
+        """
+        Load LoRA weights from a directory or file.
+
+        Args:
+            weights_path: Path to LoRA weights file or directory.
+        """
         weights_path = Path(weights_path)
         if weights_path.is_dir():
             self.pipe.load_lora_weights(str(weights_path))
@@ -109,6 +115,23 @@ class DiffusionEnhancer:
         strength: float = 0.45,
         seed: Optional[int] = None,
     ) -> Image.Image:
+        """
+        Enhance a product image using Stable Diffusion and ControlNet.
+
+        Args:
+            image: Original product image (RGB).
+            control_image: Edge map image for ControlNet conditioning (RGB).
+            prompt: Text prompt for enhancement.
+            negative_prompt: Text negative prompt for enhancement.
+            num_inference_steps: Number of diffusion steps.
+            guidance_scale: Classifier-free guidance scale.
+            controlnet_conditioning_scale: Strength of ControlNet conditioning.
+            strength: Strength of img2img transformation (0.0 to 1.0).
+            seed: Random seed for reproducibility.
+
+        Returns:
+            Enhanced product image (RGB).
+        """
         generator = None
         if seed is not None:
             generator = torch.Generator(device=self.device).manual_seed(seed)
@@ -134,12 +157,25 @@ class DiffusionEnhancer:
 
     def enhance_batch(
         self,
-        images: list,
-        control_images: list,
+        images: list[Image.Image],
+        control_images: list[Image.Image],
         prompt: str = "professional product photography, studio lighting, clean white background, high quality, 4k, detailed",
         negative_prompt: str = "blurry, noisy, low quality, distorted, deformed, watermark, text",
-        **kwargs,
-    ) -> list:
+        **kwargs: Any,
+    ) -> list[Image.Image]:
+        """
+        Enhance a batch of product images.
+
+        Args:
+            images: List of original product images.
+            control_images: List of edge map images.
+            prompt: Text prompt for enhancement.
+            negative_prompt: Text negative prompt for enhancement.
+            **kwargs: Additional arguments passed to enhance().
+
+        Returns:
+            List of enhanced product images.
+        """
         results = []
         for img, ctrl in zip(images, control_images):
             enhanced = self.enhance(
@@ -152,6 +188,12 @@ class DiffusionEnhancer:
         return results
 
     def get_pipeline_config(self) -> Dict[str, Any]:
+        """
+        Get the current configuration of the enhancement pipeline.
+
+        Returns:
+            Dictionary containing pipeline configuration details.
+        """
         return {
             "base_model": self.pipe.config._name_or_path if hasattr(self.pipe.config, "_name_or_path") else "unknown",
             "device": str(self.device),

@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import cv2
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 
 class ProductEnhancementDataset(Dataset):
@@ -26,8 +26,19 @@ class ProductEnhancementDataset(Dataset):
         prompt: str = "professional product photography, studio lighting, clean white background, high quality, 4k, detailed",
         canny_low: int = 100,
         canny_high: int = 200,
-        tokenizer=None,
+        tokenizer: Optional[Any] = None,
     ):
+        """
+        Initialize the dataset.
+
+        Args:
+            manifest_path: Path to the CSV manifest file containing image paths.
+            resolution: Target resolution for resized images.
+            prompt: Text prompt to use for conditioning.
+            canny_low: Lower threshold for Canny edge detection.
+            canny_high: Upper threshold for Canny edge detection.
+            tokenizer: Optional huggingface tokenizer for text encoding.
+        """
         self.manifest = pd.read_csv(manifest_path)
         self.resolution = resolution
         self.prompt = prompt
@@ -109,8 +120,22 @@ def get_dataloader(
     resolution: int = 512,
     num_workers: int = 4,
     shuffle: bool = True,
-    tokenizer=None,
+    tokenizer: Optional[Any] = None,
 ) -> torch.utils.data.DataLoader:
+    """
+    Create a DataLoader for the ProductEnhancementDataset.
+
+    Args:
+        manifest_path: Path to the CSV manifest.
+        batch_size: Batch size.
+        resolution: Target resolution for the images.
+        num_workers: Number of DataLoader workers.
+        shuffle: Whether to shuffle the dataset.
+        tokenizer: Optional tokenizer.
+
+    Returns:
+        A PyTorch DataLoader.
+    """
     dataset = ProductEnhancementDataset(
         manifest_path=manifest_path,
         resolution=resolution,
